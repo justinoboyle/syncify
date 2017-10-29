@@ -1,10 +1,10 @@
 const SpotifyWebHelper = require("spotify-web-helper")
+const findPort = require('../findPort')
 
 module.exports = class SpotifyListener {
 
   constructor() {
-    this.helper = SpotifyWebHelper()
-    this.ready = false
+
   }
 
   onError(d) {
@@ -13,7 +13,18 @@ module.exports = class SpotifyListener {
   }
 
   init() {
-    return new Promise(resolve => this.helper.player.on("ready", r => { resolve(this); this.ready = true }))
+    console.log("fkjdhfk")
+    return new Promise((resolve, reject) => {
+      findPort().then(port => {
+        port += 1
+        this.helper = new SpotifyWebHelper({ port })
+        console.log(port)
+        this.ready = false
+        this.helper.player.on("error", r => { reject(r) })
+        this.helper.player.on("ready", r => { resolve(this); this.ready = true })
+      })
+
+    })
   }
 
   addListener(listener = (() => {})) {
@@ -28,11 +39,16 @@ module.exports = class SpotifyListener {
     const { data, event } = streamData
     switch(event) {
       case "seek": 
-        this.helper.player.seekTo(data)
+        setTimeout(() => {
+          this.helper.player.seekTo(data.playing_position)
+        }, 20)
       case "status-will-change": {
         if(this.helper.status.track.track_resource.uri !== data.track.track_resource.uri) {
           this.helper.player.play(data.track.track_resource.uri)
-          this.helper.player.seekTo(data.playing_position)
+          setTimeout(() => {
+            this.helper.player.seekTo(data.playing_position)
+          }, 50)
+          
         }
 
         if(this.helper.status.playing !== data.playing) {
@@ -40,7 +56,9 @@ module.exports = class SpotifyListener {
             this.helper.play()
           else
             this.helper.pause()
-          this.helper.player.seekTo(data.playing_position)
+            setTimeout(() => {
+              this.helper.player.seekTo(data.playing_position)
+            }, 10)
         }
       }
         
